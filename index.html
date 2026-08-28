@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Todo-Liste</title>
+
+<!-- Damit Android die Seite als App auf den Startbildschirm legen kann -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="symbol.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="symbol-180.png">
+<meta name="theme-color" content="#0d7078">
+<meta name="description" content="Aufgaben eintragen, abhaken, wegwerfen. Alles bleibt auf diesem Gerät.">
+
+<style>
+/* =============================================================
+   1. FARBEN
+   Alles, was Farbe hat, steht hier. Wer die App umfärben will,
+   ändert nur diesen Block — der Rest zieht automatisch nach.
+   ============================================================= */
+:root {
+  --grund:       #f0f7f7;
+  --karte:       #ffffff;
+  --text:        #0f3238;
+  --gedaempft:   #456a70;
+  --linie:       #d3e6e6;
+  --akzent:      #0d7078;
+  --akzent-text: #ffffff;
+  --akzent-hell: #ddf0f0;
+  --warnung:     #ab4529;
+  --stern:       #b1801a;
+  --schatten:    rgba(10, 50, 56, .12);
+}
+
+/* Wer sein Gerät auf dunkel gestellt hat, bekommt die dunkle Fassung. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grund:       #0d1f23;
+    --karte:       #163138;
+    --text:        #e8f4f4;
+    --gedaempft:   #9bbcc1;
+    --linie:       #26454d;
+    --akzent:      #4ecdd6;
+    --akzent-text: #072a2f;
+    --akzent-hell: #1c3f47;
+    --warnung:     #f0a184;
+    --stern:       #edc158;
+    --schatten:    rgba(0, 0, 0, .40);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 32px 16px 80px;
+  background: var(--grund);
+  color: var(--text);
+  font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+.seite { max-width: 620px; margin: 0 auto; }
+
+/* =============================================================
+   2. KOPF
+   ============================================================= */
+header { margin-bottom: 28px; }
+
+h1 {
+  margin: 0;
+  font-size: 36px;
+  letter-spacing: -.5px;
+}
+
+#stand {
+  margin: 6px 0 0;
+  color: var(--gedaempft);
+  font-size: 15px;
+}
+
+/* =============================================================
+   3. EINGABE
+   ============================================================= */
+form { display: flex; gap: 10px; margin-bottom: 20px; }
+
+input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  font: inherit;
+  color: var(--text);
+  background: var(--karte);
+  border: 2px solid var(--linie);
+  border-radius: 12px;
+}
+input[type="text"]::placeholder { color: var(--gedaempft); }
+input[type="text"]:focus { outline: none; border-color: var(--akzent); }
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+}
+button:focus-visible,
+input:focus-visible { outline: 3px solid var(--akzent); outline-offset: 2px; }
+
+.haupt {
+  padding: 14px 22px;
+  font-weight: 600;
+  color: var(--akzent-text);
+  background: var(--akzent);
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.haupt:hover { filter: brightness(1.08); }
+
+/* =============================================================
+   4. FILTER
+   ============================================================= */
+.filter {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  border-bottom: 2px solid var(--linie);
+}
+
+.filter button {
+  padding: 8px 14px 10px;
+  color: var(--gedaempft);
+  border-radius: 8px 8px 0 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+}
+.filter button:hover { color: var(--text); }
+.filter button[aria-selected="true"] {
+  color: var(--akzent);
+  font-weight: 600;
+  border-bottom-color: var(--akzent);
+}
+
+/* =============================================================
+   5. DIE AUFGABEN
+   ============================================================= */
+ul { list-style: none; margin: 0; padding: 0; }
+
+li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: var(--karte);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px var(--schatten);
+}
+
+input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--akzent);
+  cursor: pointer;
+}
+
+.text {
+  flex: 1;
+  word-break: break-word;
+  cursor: text;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+.text:hover { background: var(--akzent-hell); }
+
+li.fertig .text { text-decoration: line-through; color: var(--gedaempft); }
+
+/* Das Feld, das beim Bearbeiten an die Stelle des Textes tritt */
+.text-feld {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  font: inherit;
+  color: var(--text);
+  background: var(--grund);
+  border: 2px solid var(--akzent);
+  border-radius: 6px;
+}
+
+.symbol {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--gedaempft);
+}
+.symbol:hover { background: var(--akzent-hell); color: var(--text); }
+
+.stern[aria-pressed="true"] { color: var(--stern); }
+.weg:hover { color: var(--warnung); }
+
+/* Wichtiges bekommt einen farbigen Streifen an der linken Kante. */
+li.wichtig { box-shadow: inset 4px 0 0 var(--stern), 0 2px 8px var(--schatten); }
+
+.leer {
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--gedaempft);
+  border: 2px dashed var(--linie);
+  border-radius: 12px;
+}
+
+/* =============================================================
+   6. FUSSZEILE UND HINWEIS
+   ============================================================= */
+footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+  min-height: 34px;
+}
+
+.aufraeumen { padding: 8px 12px; color: var(--gedaempft); font-size: 15px; }
+.aufraeumen:hover { color: var(--warnung); background: var(--akzent-hell); }
+
+/* Der kleine Hinweis unten mit dem Rückgängig-Knopf */
+#hinweis {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 90px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 14px 12px 18px;
+  background: var(--karte);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px var(--schatten);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .22s ease, opacity .22s ease;
+}
+#hinweis.sichtbar { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+
+#hinweis button {
+  padding: 6px 12px;
+  font-weight: 600;
+  color: var(--akzent);
+  background: var(--akzent-hell);
+}
+
+/* Bildschirmleser-Text, für das Auge unsichtbar */
+.nur-vorlesen {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 420px) {
+  h1 { font-size: 30px; }
+  .haupt { padding: 14px 16px; }
+}
+</style>
+</head>
+
+<body>
+<div class="seite">
+
+  <header>
+    <h1>Todo-Liste</h1>
+    <p id="stand" aria-live="polite"></p>
+  </header>
+
+  <form id="formular">
+    <input type="text" id="feld" placeholder="Was ist zu tun?" maxlength="200"
+           autocomplete="off" aria-label="Neue Aufgabe">
+    <button type="submit" class="haupt">Hinzufügen</button>
+  </form>
+
+  <div class="filter" role="tablist" aria-label="Aufgaben filtern">
+    <button role="tab" data-filter="alle">Alle</button>
+    <button role="tab" data-filter="offen">Offen</button>
+    <button role="tab" data-filter="fertig">Erledigt</button>
+  </div>
+
+  <ul id="liste"></ul>
+
+  <footer id="fusszeile"></footer>
+
+</div>
+
+<div id="hinweis" role="status">
+  <span id="hinweis-text"></span>
+  <button id="zurueck">Rückgängig</button>
+</div>
+
+<script>
+"use strict";
+
+/* =============================================================
+   WIE DIESE APP AUFGEBAUT IST
+
+   Es gibt genau eine Stelle, an der die Wahrheit steht: die
+   Variable `aufgaben`. Jede Aktion ändert nur diese Liste und
+   ruft danach `zeichnen()` auf, das die Seite neu aufbaut.
+
+   Dieses eine Muster — ändern, speichern, neu zeichnen — trägt
+   die ganze App. Mehr Regeln gibt es hier nicht.
+   ============================================================= */
+
+const SCHLUESSEL = "todo-liste.v1";
+
+let aufgaben = laden();
+let filter   = "alle";      // "alle" | "offen" | "fertig"
+let rueckgaengig = null;    // gemerkter Stand für den Rückgängig-Knopf
+let hinweisUhr = null;
+
+const feld      = document.getElementById("feld");
+const formular  = document.getElementById("formular");
+const liste     = document.getElementById("liste");
+const stand     = document.getElementById("stand");
+const fusszeile = document.getElementById("fusszeile");
+const hinweis   = document.getElementById("hinweis");
+
+
+/* ---------- Speichern -----------------------------------------
+   localStorage ist ein Notizzettel, den der Browser für diese
+   Seite aufbewahrt. Er liegt auf dem Gerät und geht nicht ins
+   Internet — auf einem anderen Rechner ist die Liste also leer.
+   -------------------------------------------------------------- */
+
+function speichern() {
+  try {
+    localStorage.setItem(SCHLUESSEL, JSON.stringify(aufgaben));
+  } catch (e) {
+    // Zum Beispiel im privaten Fenster mancher Browser. Die App
+    // funktioniert weiter, sie vergisst nur beim Schließen.
+  }
+}
+
+function laden() {
+  try {
+    const roh = JSON.parse(localStorage.getItem(SCHLUESSEL));
+    return Array.isArray(roh) ? roh : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+
+/* ---------- Reihenfolge ---------------------------------------
+   Wichtiges nach oben, Erledigtes nach unten, sonst bleibt alles
+   in der Reihenfolge, in der es eingetragen wurde.
+   -------------------------------------------------------------- */
+
+function sortiert() {
+  return aufgaben.slice().sort(function (a, b) {
+    if (a.fertig !== b.fertig)   return a.fertig ? 1 : -1;
+    if (a.wichtig !== b.wichtig) return a.wichtig ? -1 : 1;
+    return 0;
+  });
+}
+
+function finde(id) {
+  return aufgaben.find(function (a) { return a.id === id; });
+}
+
+
+/* ---------- Zeichnen ------------------------------------------ */
+
+const LEERTEXTE = {
+  alle:   "Noch nichts zu tun. Schreib oben etwas rein.",
+  offen:  "Nichts offen. Alles erledigt!",
+  fertig: "Noch nichts abgehakt."
+};
+
+function zeichnen() {
+  // Filterknöpfe: der aktive wird markiert.
+  document.querySelectorAll(".filter button").forEach(function (knopf) {
+    knopf.setAttribute("aria-selected", knopf.dataset.filter === filter);
+  });
+
+  const sichtbar = sortiert().filter(function (a) {
+    if (filter === "offen")  return !a.fertig;
+    if (filter === "fertig") return a.fertig;
+    return true;
+  });
+
+  liste.replaceChildren();
+
+  if (sichtbar.length === 0) {
+    const leer = document.createElement("li");
+    leer.className = "leer";
+    leer.textContent = LEERTEXTE[filter];
+    liste.append(leer);
+  } else {
+    sichtbar.forEach(function (aufgabe) {
+      liste.append(zeile(aufgabe));
+    });
+  }
+
+  // Zählerstand im Kopf
+  const offen  = aufgaben.filter(function (a) { return !a.fertig; }).length;
+  const fertig = aufgaben.length - offen;
+
+  if (aufgaben.length === 0) {
+    stand.textContent = "";
+  } else if (offen === 0) {
+    stand.textContent = "Alles erledigt — " + fertig + (fertig === 1 ? " Aufgabe." : " Aufgaben.");
+  } else {
+    stand.textContent = offen + " offen" +
+                        (fertig > 0 ? " · " + fertig + " erledigt" : "");
+  }
+
+  // Aufräumen-Knopf nur zeigen, wenn es etwas aufzuräumen gibt.
+  fusszeile.replaceChildren();
+  if (fertig > 0) {
+    const knopf = document.createElement("button");
+    knopf.className = "aufraeumen";
+    knopf.textContent = "Erledigte entfernen (" + fertig + ")";
+    knopf.onclick = aufraeumen;
+    fusszeile.append(knopf);
+  }
+}
+
+function zeile(aufgabe) {
+  const li = document.createElement("li");
+  li.className = (aufgabe.fertig ? "fertig " : "") + (aufgabe.wichtig ? "wichtig" : "");
+
+  // Abhaken
+  const haken = document.createElement("input");
+  haken.type = "checkbox";
+  haken.checked = aufgabe.fertig;
+  haken.setAttribute("aria-label", "Erledigt: " + aufgabe.text);
+  haken.onchange = function () {
+    aufgabe.fertig = haken.checked;
+    speichern();
+    zeichnen();
+  };
+
+  // Der Text — ein Klick darauf macht ihn bearbeitbar.
+  const text = document.createElement("span");
+  text.className = "text";
+  text.textContent = aufgabe.text;
+  text.title = "Zum Ändern anklicken";
+  text.onclick = function () { bearbeiten(li, aufgabe); };
+
+  // Wichtig-Stern
+  const stern = document.createElement("button");
+  stern.className = "symbol stern";
+  stern.textContent = aufgabe.wichtig ? "★" : "☆";
+  stern.title = "Als wichtig markieren";
+  stern.setAttribute("aria-label", "Wichtig: " + aufgabe.text);
+  stern.setAttribute("aria-pressed", String(!!aufgabe.wichtig));
+  stern.onclick = function () {
+    aufgabe.wichtig = !aufgabe.wichtig;
+    speichern();
+    zeichnen();
+  };
+
+  // Löschen
+  const weg = document.createElement("button");
+  weg.className = "symbol weg";
+  weg.textContent = "×";
+  weg.title = "Löschen";
+  weg.setAttribute("aria-label", "Löschen: " + aufgabe.text);
+  weg.onclick = function () { loeschen(aufgabe); };
+
+  li.append(haken, text, stern, weg);
+  return li;
+}
+
+
+/* ---------- Ändern -------------------------------------------- */
+
+function bearbeiten(li, aufgabe) {
+  const alt = li.querySelector(".text");
+  if (!alt) return;
+
+  const eingabe = document.createElement("input");
+  eingabe.type = "text";
+  eingabe.className = "text-feld";
+  eingabe.value = aufgabe.text;
+  eingabe.maxLength = 200;
+  eingabe.setAttribute("aria-label", "Aufgabe ändern");
+
+  let beendet = false;
+
+  function fertigstellen(uebernehmen) {
+    if (beendet) return;          // blur und Enter nicht doppelt ausführen
+    beendet = true;
+    const neu = eingabe.value.trim();
+    if (uebernehmen && neu !== "") {
+      aufgabe.text = neu;
+      speichern();
+    }
+    zeichnen();
+  }
+
+  eingabe.onkeydown = function (e) {
+    if (e.key === "Enter")  fertigstellen(true);
+    if (e.key === "Escape") fertigstellen(false);   // Abbrechen
+  };
+  eingabe.onblur = function () { fertigstellen(true); };
+
+  li.replaceChild(eingabe, alt);
+  eingabe.focus();
+  eingabe.select();
+}
+
+
+/* ---------- Hinzufügen, Löschen, Aufräumen -------------------- */
+
+formular.onsubmit = function (e) {
+  e.preventDefault();
+  const text = feld.value.trim();
+  if (text === "") return;
+
+  aufgaben.push({
+    id: String(Date.now()) + Math.random().toString(16).slice(2, 8),
+    text: text,
+    fertig: false,
+    wichtig: false
+  });
+
+  feld.value = "";
+  feld.focus();
+  speichern();
+
+  // Nach dem Eintragen soll man das Neue auch sehen.
+  if (filter === "fertig") filter = "alle";
+  zeichnen();
+};
+
+function loeschen(aufgabe) {
+  merken();
+  aufgaben = aufgaben.filter(function (a) { return a.id !== aufgabe.id; });
+  speichern();
+  zeichnen();
+  zeigeHinweis("Gelöscht: " + kurz(aufgabe.text));
+}
+
+function aufraeumen() {
+  const anzahl = aufgaben.filter(function (a) { return a.fertig; }).length;
+  merken();
+  aufgaben = aufgaben.filter(function (a) { return !a.fertig; });
+  speichern();
+  zeichnen();
+  zeigeHinweis(anzahl + (anzahl === 1 ? " Aufgabe entfernt" : " Aufgaben entfernt"));
+}
+
+function kurz(text) {
+  return text.length > 30 ? text.slice(0, 30) + "…" : text;
+}
+
+
+/* ---------- Rückgängig ----------------------------------------
+   Vor jedem Löschen legen wir eine Kopie der ganzen Liste beiseite.
+   Der Knopf im Hinweis holt sie zurück.
+   -------------------------------------------------------------- */
+
+function merken() {
+  rueckgaengig = JSON.parse(JSON.stringify(aufgaben));
+}
+
+function zeigeHinweis(text) {
+  document.getElementById("hinweis-text").textContent = text;
+  hinweis.classList.add("sichtbar");
+  clearTimeout(hinweisUhr);
+  hinweisUhr = setTimeout(versteckeHinweis, 7000);
+}
+
+function versteckeHinweis() {
+  hinweis.classList.remove("sichtbar");
+}
+
+document.getElementById("zurueck").onclick = function () {
+  if (!rueckgaengig) return;
+  aufgaben = rueckgaengig;
+  rueckgaengig = null;
+  speichern();
+  zeichnen();
+  versteckeHinweis();
+};
+
+
+/* ---------- Filterknöpfe -------------------------------------- */
+
+document.querySelectorAll(".filter button").forEach(function (knopf) {
+  knopf.onclick = function () {
+    filter = knopf.dataset.filter;
+    zeichnen();
+  };
+});
+
+
+/* ---------- Los geht's ---------------------------------------- */
+
+zeichnen();
+feld.focus();
+</script>
+</body>
+</html>

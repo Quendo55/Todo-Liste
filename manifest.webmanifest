@@ -1,0 +1,15 @@
+{
+  "name": "Todo-Liste",
+  "short_name": "Todo",
+  "description": "Aufgaben eintragen, abhaken, wegwerfen. Alles bleibt auf diesem Gerät.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f0f7f7",
+  "theme_color": "#0d7078",
+  "icons": [
+    { "src": "symbol-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "symbol-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
